@@ -72,13 +72,7 @@
   .dots { display:flex; gap:8px; }
   .dot { width:10px; height:10px; border-radius:50%; background:#334155 }
   .dot:nth-child(1){ background:#ef4444 } .dot:nth-child(2){ background:#f59e0b } .dot:nth-child(3){ background:#22c55e }
-  .term-body {
-    padding: 16px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 14.5px;
-    min-height: 380px;          /* Taller so nothing jumps on first reveal */
-    position: relative;
-  }
+  .term-body { padding: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 14.5px; min-height: 220px; }
   .prompt { color:#9ca3af }
   .cursor {
     display:inline-block; width:9px; height:18px; background:#cbd5e1; margin-left:2px; transform: translateY(3px);
@@ -89,12 +83,7 @@
   .panel {
     background: var(--panel); border: 1px solid #182033; border-radius: 10px; padding: 14px; margin-top: 14px;
     box-shadow: 0 10px 24px rgba(0,0,0,.25);
-    transition: opacity .22s ease, visibility .22s ease;
-    opacity: 1; visibility: visible;
   }
-  /* Hidden without layout shift */
-  .panel.hidden { opacity: 0; visibility: hidden; }
-
   .panel .badge { color: var(--warn); font-weight: 800; letter-spacing:.3px }
   .hr {
     height: 1px; background: linear-gradient(90deg, transparent, #22314d, transparent); margin: 10px 0 12px;
@@ -158,8 +147,8 @@
       <div class="term-body">
         <div id="line"><span class="prompt">$</span> <span id="type"></span><span class="cursor"></span></div>
 
-        <!-- Translations panel (pre-rendered; hidden without layout shift) -->
-        <div class="panel hidden" id="translate">
+        <!-- Translations panel (appears after typing) -->
+        <div class="panel" id="translate" style="display:none;">
           <div class="label">Translations</div>
           <div class="hr"></div>
           <div style="display:grid; gap:10px; grid-template-columns: repeat(auto-fit,minmax(220px,1fr));">
@@ -174,8 +163,8 @@
           </div>
         </div>
 
-        <!-- Explain Before Executing (Pro, pre-rendered; hidden without layout shift) -->
-        <div class="panel hidden" id="explain">
+        <!-- Explain Before Executing (Pro) -->
+        <div class="panel" id="explain" style="display:none;">
           <div class="badge">PRO FEATURE: Explain Before Executing</div>
           <div class="hr"></div>
           <div class="label" style="margin-bottom:6px">Command to run (Bash)</div>
@@ -239,7 +228,7 @@
 </footer>
 
 <script>
-/* --- Terminal Simulation with no layout shift --- */
+/* --- Terminal Simulation --- */
 const scenarios = [
   {
     query: "Show me all files in the current folder",
@@ -292,9 +281,6 @@ const exCmdEl = document.getElementById("exCmd");
 const exListEl = document.getElementById("exList");
 const riskEl = document.getElementById("risk");
 
-function show(el){ el.classList.remove('hidden'); }
-function hide(el){ el.classList.add('hidden'); }
-
 let iScenario = 0;
 
 function typeText(text, done) {
@@ -319,17 +305,20 @@ function updatePanels(sc) {
 }
 
 function runScenario() {
-  // Keep space but hide visually (no layout shift)
-  hide(translatePanel);
-  hide(explainPanel);
+  translatePanel.style.display = "none";
+  explainPanel.style.display = "none";
 
   const sc = scenarios[iScenario];
   typeText(sc.query, () => {
     setTimeout(() => {
+      translatePanel.style.display = "block";
+      translatePanel.animate([{opacity:0, transform:"translateY(4px)"},{opacity:1, transform:"translateY(0)"}], {duration:220, easing:"ease-out"});
       updatePanels(sc);
-      show(translatePanel);                // fade in, no movement
+
       setTimeout(() => {
-        show(explainPanel);                // fade in, no movement
+        explainPanel.style.display = "block";
+        explainPanel.animate([{opacity:0, transform:"translateY(4px)"},{opacity:1, transform:"translateY(0)"}], {duration:240, easing:"ease-out"});
+        // Next scenario after a pause
         setTimeout(() => {
           iScenario = (iScenario + 1) % scenarios.length;
           runScenario();
@@ -342,24 +331,19 @@ runScenario();
 
 /* --- Pro Colors Demo --- */
 const toggleBtn = document.getElementById("togglePro");
-if (toggleBtn) {
-  toggleBtn.addEventListener("click", () => {
-    document.body.classList.toggle("pro-theme");
-  });
-}
+toggleBtn.addEventListener("click", () => {
+  document.body.classList.toggle("pro-theme");
+});
+
 document.querySelectorAll(".swatch").forEach(sw => {
   sw.addEventListener("click", () => {
     const v = sw.dataset.variant;
+    // Quick demo variants
     if (v === "pro") document.body.classList.add("pro-theme");
-    if (v === "base") {
-      document.body.classList.remove("pro-theme");
-      // reset potential hot overrides
-      document.documentElement.style.removeProperty('--cmd');
-      document.documentElement.style.removeProperty('--brand');
-      document.documentElement.style.removeProperty('--accent');
-    }
+    if (v === "base") document.body.classList.remove("pro-theme");
     if (v === "hot") {
       document.body.classList.add("pro-theme");
+      // hot tweak
       document.documentElement.style.setProperty('--cmd', '#fca5a5');
       document.documentElement.style.setProperty('--brand', '#f43f5e');
       document.documentElement.style.setProperty('--accent', '#f59e0b');
